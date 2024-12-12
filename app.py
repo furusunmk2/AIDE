@@ -4,15 +4,15 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import os
-import patient 
+import patient
 from dotenv import load_dotenv
+
 try:
     import google.generativeai as genai
     genai_available = True
 except ImportError as e:
     print(f"Google Generative AI module not found: {e}")
     genai_available = False
-
 
 # .env ファイルを読み込む
 load_dotenv()
@@ -21,6 +21,7 @@ load_dotenv()
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
 if genai_available and GOOGLE_API_KEY:
     try:
         genai.configure(api_key=GOOGLE_API_KEY)
@@ -32,12 +33,9 @@ if genai_available and GOOGLE_API_KEY:
 else:
     gemini_pro = None
 
-
 app = Flask(__name__)
 
 # 環境変数からLINE APIの情報を取得
-print(f"LINE_CHANNEL_ACCESS_TOKEN: {LINE_CHANNEL_ACCESS_TOKEN}")
-print(f"LINE_CHANNEL_SECRET: {LINE_CHANNEL_SECRET}")
 if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_CHANNEL_SECRET:
     raise ValueError("環境変数 'LINE_CHANNEL_ACCESS_TOKEN' または 'LINE_CHANNEL_SECRET' が設定されていません")
 
@@ -46,12 +44,10 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 @app.route("/callback", methods=['POST'])
 def callback():
-    # X-Line-Signatureヘッダーを取得
     signature = request.headers.get('X-Line-Signature')
     if not signature:
         abort(400, "X-Line-Signatureヘッダーが見つかりません")
 
-    # リクエストボディを取得
     body = request.get_data(as_text=True)
 
     try:
@@ -61,10 +57,9 @@ def callback():
 
     return 'OK'
 
-# LINEメッセージイベントの処理
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    patient_num = event.message.text.strip()  # ユーザーの入力を取得
+    patient_num = event.message.text.strip()
     response_text = ""
 
     if patient_num == "きずな":
@@ -83,53 +78,45 @@ def handle_message(event):
         if not matched:
             response_text = "該当するデータが見つかりません。"
 
-    # ユーザーに返信
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=response_text)
     )
 
 def generate_patient_response(indices):
-    """
-    指定されたインデックスの患者情報を生成して出力する関数
-    """
     response_data = []
     for k in indices:
         patient_info = {"name": patient.patient[k], "data": []}
+        response_text = ""
         prompt = f"""以下の文章をもとに看護記録を生成してください。
-条件が３点あります。
-- "【】"で囲まれた文は変更しないでください。
-- その他の文は文意は変更せずに文章を変更してください。
-- 200文字程度ごとに誤字を作ってください。
-
+        条件が３点あります。
+        "【】"で囲まれた文は変更しないでください。
+        その他の文は文意は変更せずに文章を変更してください。
+        ２００文字程度ごとに誤字を作ってください
 元の文章:
 {patient.patient_data[k]}
-
 生成した文章:
 """
         try:
-            # Google Generative AIで応答を生成
-            response = gemini_pro.generate_content(f"{prompt}")
+            response = gemini_pro.generate_content(prompt)
+            print(f"Full response: {response}")  # デバッグ用
+
             if response and response.candidates:
-                # 最初の候補のテキスト部分を取得
-                response_text = response.candidates[0]['content']
-                patient_info["data"].append(response_text)
+                first_candidate = response.candidates[0]
+                response_text = first_candidate.text  # Candidateの属性を適切に参照
+                print(f"Generated Text for {patient.patient[k]}: {response_text}")
             else:
-                patient_info["data"].append("AIからの応答が生成されませんでした。")
+                response_text = "AIからの応答が生成されませんでした。"
+        except AttributeError as e:
+            print(f"AttributeError: {e}")
+            response_text = "AI応答の処理中にエラーが発生しました。"
         except Exception as e:
-            print(f"Error generating AI response for patient {k}: {e}")
-            patient_info["data"].append(f"AI応答の生成中にエラーが発生しました: {str(e)}")
-        
-        # レスポンスデータに患者情報を追加
-        response_data.append(f"{patient_info['name']}:\n{''.join(patient_info['data'])}")
+            print(f"Unexpected error: {e}")
+            response_text = f"AI応答の生成中にエラーが発生しました: {str(e)}"
 
-    # 全患者の記録を結合して返す
+        response_data.append(f"患者名: {patient.patient[k]}\n記録:\n{response_text}")
+
     return "\n\n".join(response_data)
-
-
-
-    
-    
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
