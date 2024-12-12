@@ -84,6 +84,9 @@ def handle_message(event):
     )
 
 def generate_patient_response(indices):
+    """
+    患者情報を生成する関数
+    """
     response_data = []
     for k in indices:
         patient_info = {"name": patient.patient[k], "data": []}
@@ -97,27 +100,34 @@ def generate_patient_response(indices):
 {patient.patient_data[k]}
 生成した文章:
 """
-        try:
-            response = gemini_pro.generate_content(prompt)
-            print(f"Full response: {response}")  # デバッグ用
+        print(f"Generated Prompt: {prompt}")  # プロンプトをデバッグ出力
 
-            if response and response.candidates:
-                first_candidate = response.candidates[0]
-                response_text = first_candidate.text  # Candidateの属性を適切に参照
-                print(f"Generated Text for {patient.patient[k]}: {response_text}")
+        try:
+            # AIモデルが設定されていない場合の対応
+            if not gemini_pro:
+                response_text = "ダミー応答: AIモデルが設定されていません。"
             else:
-                response_text = "AIからの応答が生成されませんでした。"
-        except AttributeError as e:
-            print(f"AttributeError: {e}")
-            response_text = "AI応答の処理中にエラーが発生しました。"
+                # Google Generative AIで応答を生成
+                response = gemini_pro.generate_content(prompt)
+                print(f"Response object: {response}")  # レスポンス全体をデバッグ出力
+
+                # 応答候補が存在する場合
+                if response and hasattr(response, 'candidates') and response.candidates:
+                    # 最初の候補を取得
+                    first_candidate = response.candidates[0]
+                    response_text = getattr(first_candidate, 'text', '生成されたテキストがありません')
+                else:
+                    response_text = "AIからの応答が生成されませんでした。"
+
         except Exception as e:
-            print(f"Unexpected error: {e}")
+            print(f"Error during AI content generation: {e}")
             response_text = f"AI応答の生成中にエラーが発生しました: {str(e)}"
 
+        # 患者名と記録をまとめる
         response_data.append(f"患者名: {patient.patient[k]}\n記録:\n{response_text}")
 
+    # 全患者のデータを結合して返す
     return "\n\n".join(response_data)
-
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
