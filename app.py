@@ -77,7 +77,7 @@ def handle_message(event):
                 break
         if not matched:
             response_text = "該当するデータが見つかりません。"
-
+    response_text.replace("**","")
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=response_text)
