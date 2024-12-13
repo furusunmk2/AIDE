@@ -145,7 +145,7 @@ def generate_patient_response(indices):
         except Exception as e:
             print(f"Unexpected error during AI content generation: {e}")
             response_text = f"AI応答の生成中にエラーが発生しました: {str(e)}"
-            
+        response_text.replace("**","")
         # 患者名と記録をまとめる                
         response_data.append(f"患者名: {patient.patient[k]}\n{response_text}")
 
