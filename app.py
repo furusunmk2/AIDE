@@ -101,33 +101,26 @@ def generate_patient_response(indices):
 {patient.patient_data[k]}
 生成した文章:
 """
-        print(f"Generated Prompt: {prompt}")  # プロンプトをデバッグ出力
-
         try:
             # Google Generative AIで応答を生成
-            model = genai.GenerativeModel('gemini-pro')
-            response = model.generate_content(f"{prompt}")
-            print(f"GenerateContentResponse: {response}")  # レスポンス全体をデバッグ出力
-                
-            # レスポンスが存在し、候補が含まれている場合に処理を続行
-            # 応答候補が存在する場合
-            if response and response.candidates:
-                # 最初の候補のテキスト部分を取得
-                first_candidate = response.candidates[0]
-                response_text = first_candidate.content.parts[0].text  # ここで属性を利用
-                print(f"First Candidate: {first_candidate}")  # 候補を詳細にデバッグ
-                # parts配列から最初のテキストを取得
-                response_text = first_candidate.content.parts[0].text
-                print(f"Generated Text: {response_text}")  # 応答テキストをデバッグ出力
+            if gemini_pro:
+                response = gemini_pro.generate_content(f"{prompt}")
+                if response and response.candidates:
+                    # 最初の候補を取得
+                    response_text = response.candidates[0].content.parts[0].text.strip()
+                else:
+                    response_text = "AI応答が生成されませんでした。"
             else:
-                print("No candidates found in the response.")  # 応答が空の場合
-                response_text = "AIからの応答が生成されませんでした。"
-        except AttributeError as e:
-            print(f"AttributeError in response handling: {e}")
-            response_text = "AI応答の処理中にエラーが発生しました。"
+                response_text = "AIモデルが設定されていません。"
         except Exception as e:
-            print(f"Unexpected error during AI content generation: {e}")
             response_text = f"AI応答の生成中にエラーが発生しました: {str(e)}"
+
+        # リスト形式のデータを整形
+        if isinstance(response_text, list):
+            response_text = "".join(response_text).strip()
+
+        # 不要な改行を削除
+        response_text = response_text.replace("\n", "").replace("  ", " ")
 
         # 患者名と記録をまとめる
         response_data.append(f"患者名: {patient.patient[k]}\n{response_text}")
