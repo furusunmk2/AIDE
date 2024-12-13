@@ -130,7 +130,7 @@ def generate_patient_response(indices):
             response_text = f"AI応答の生成中にエラーが発生しました: {str(e)}"
             
         response_text = response_text.replace("*", "")   
-
+        response_text = response_text.replace("\n", "")  
         # 患者名と記録をまとめる
         response_data.append(f"患者名: {patient.patient[k]}\n{response_text}")
 
