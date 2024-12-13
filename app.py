@@ -91,7 +91,8 @@ def generate_patient_response(indices):
     for k in indices:
         patient_info = {"name": patient.patient[k], "data": []}
         response_text = ""
-        prompt = f"""以下の文章をもとに看護記録を生成してください。
+        prompt = f"""以下の形式で医療記録を生成してください。
+        利用者様は精神障害や発達障害を抱える方で障碍者向けグループホームに通いながら、平日は作業所へ通っています。
         条件が３点あります。
         "【】"で囲まれた文は変更しないでください。
         その他の文は文意は変更せずに文章を変更してください。
@@ -129,7 +130,7 @@ def generate_patient_response(indices):
             response_text = f"AI応答の生成中にエラーが発生しました: {str(e)}"
 
         # 患者名と記録をまとめる
-        response_data.append(f"患者名: {patient.patient[k]}\n記録:\n{response_text}")
+        response_data.append(f"患者名: {patient.patient[k]}\n{response_text}")
 
     # 全患者のデータを結合して返す
     return "\n\n".join(response_data)
