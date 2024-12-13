@@ -77,7 +77,7 @@ def handle_message(event):
                 break
         if not matched:
             response_text = "該当するデータが見つかりません。"
-    response_text.replace("**","")
+    response_text.replace("*","")
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=response_text)
@@ -95,7 +95,6 @@ def generate_patient_response(indices):
 
 元の文章を参照して以下の形式で医療記録を生成してください。
 '''
-名前
 【食生活、清潔、排泄、睡眠、生活リズム、部屋の整頓等】
 生成した文章
 【精神状態】 
